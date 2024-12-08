@@ -1,0 +1,17 @@
+{
+  "files": {
+    "main.css": "/nhanpet/static/css/main.1d578bef.css",
+    "main.js": "/nhanpet/static/js/main.349acbb8.js",
+    "static/js/453.8ab44547.chunk.js": "/nhanpet/static/js/453.8ab44547.chunk.js",
+    "static/media/background.jpg": "/nhanpet/static/media/background.866f12f2981ce597a3c2.jpg",
+    "static/media/logo.png": "/nhanpet/static/media/logo.7a5f72335a4d126e96db.png",
+    "index.html": "/nhanpet/index.html",
+    "main.1d578bef.css.map": "/nhanpet/static/css/main.1d578bef.css.map",
+    "main.349acbb8.js.map": "/nhanpet/static/js/main.349acbb8.js.map",
+    "453.8ab44547.chunk.js.map": "/nhanpet/static/js/453.8ab44547.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.1d578bef.css",
+    "static/js/main.349acbb8.js"
+  ]
+}
