@@ -1,36 +1,55 @@
-import React, { useState } from 'react';
-import { Box, Typography, CardContent, Card, Button, TextField, Grid, Paper, FormControl, InputLabel, Select, MenuItem, InputAdornment } from '@mui/material';
-import { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Box, Grid, Typography, Button, FormControl, InputLabel, Select, MenuItem, TextField, Paper, Card, CardContent, Alert } from '@mui/material';
+import { useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 const CheckoutPage = () => {
-    // Danh sách voucher có sẵn
-    const availableVouchers = [
-        { code: 'DISCOUNT10', discount: 0.1, description: 'Giảm 10%' },
-        { code: 'DISCOUNT20', discount: 0.2, description: 'Giảm 20%' },
-        { code: 'DISCOUNT30', discount: 0.3, description: 'Giảm 30%' },
-    ];
-
-    const [address, setAddress] = useState('');
+    const location = useLocation();
+    const navigate = useNavigate();  // Dùng để điều hướng về trang ProductPage
+    const [cart, setCart] = useState([]);
+    const [selectedItems, setSelectedItems] = useState({});
     const [voucher, setVoucher] = useState('');
+    const [discount, setDiscount] = useState(0);
+    const [shippingFee, setShippingFee] = useState(20000);
+    const [paymentMethod, setPaymentMethod] = useState('cash');
+    const [defaultAddress, setDefaultAddress] = useState(null);
+    const [shippingMethod, setShippingMethod] = useState('standard');
     const [note, setNote] = useState('');
-    const [shippingMethod, setShippingMethod] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('');
-    const [orderAmount, setOrderAmount] = useState(100000); // Giả sử tổng tiền đơn hàng là 100,000 VND
-    const [shippingFee, setShippingFee] = useState(20000); // Giả sử phí ship là 20,000 VND
-    const [discount, setDiscount] = useState(0); // Voucher giảm giá
-    const [voucherType, setVoucherType] = useState(''); // Loại voucher: chọn hoặc nhập
-    const [voucherError, setVoucherError] = useState('');
+    const [voucherType, setVoucherType] = useState('');  // Định nghĩa voucherType
+
+    useEffect(() => {
+        if (location.state) {
+            setCart(location.state.cart);
+            setSelectedItems(location.state.selectedItems);
+        }
+
+        // Lấy địa chỉ mặc định từ localStorage
+        const addresses = JSON.parse(localStorage.getItem('addresses')) || [];
+        const defaultAddr = addresses.find(address => address.isDefault);
+        setDefaultAddress(defaultAddr);
+    }, [location.state]);
+
+    const calculateTotalAmount = () => {
+        return cart.reduce((total, product) => {
+            if (selectedItems[product.id]) {
+                return total + product.price * product.quantity;
+            }
+            return total;
+        }, 0);
+    };
+
+    const totalAmount = calculateTotalAmount() + shippingFee - discount;
 
     const handleVoucherChange = (e) => {
-
         setVoucher(e.target.value);
-        setVoucherError('');
-        // Kiểm tra mã voucher nếu nhập thủ công
-        const foundVoucher = availableVouchers.find(v => v.code === e.target.value);
+        // Kiểm tra mã voucher
+        const validVouchers = [
+            { code: 'DISCOUNT10', discount: 0.1 },
+            { code: 'DISCOUNT20', discount: 0.2 },
+            { code: 'DISCOUNT30', discount: 0.3 }
+        ];
+        const foundVoucher = validVouchers.find(v => v.code === e.target.value);
         if (foundVoucher) {
-            setDiscount(foundVoucher.discount * orderAmount); // Giảm giá theo mã voucher
-        } else if (e.target.value !== '') {
-            setVoucherError('Voucher không hợp lệ');
-            setDiscount(0);
+            setDiscount(foundVoucher.discount * calculateTotalAmount());
         } else {
             setDiscount(0);
         }
@@ -38,164 +57,208 @@ const CheckoutPage = () => {
 
     const handleVoucherTypeChange = (e) => {
         setVoucherType(e.target.value);
-        setVoucher(''); // Reset voucher khi chuyển kiểu voucher
-        setDiscount(0); // Reset discount khi thay đổi loại voucher
-        setVoucherError(''); // Reset lỗi voucher
+        setVoucher('');
+        setDiscount(0);
     };
 
-    const handleConfirmPayment = () => {
-        const totalAmount = orderAmount + shippingFee - discount;
-        alert(`Tổng số tiền cần thanh toán: ${totalAmount.toLocaleString()} VND`);
+    const handleConfirmPayment = async () => {
+        if (!cart || cart.length === 0) {
+            alert('Không có sản phẩm nào trong giỏ hàng để thanh toán.');
+            navigate('/cart'); // Chuyển hướng về giỏ hàng nếu không có sản phẩm
+            return;
+        }
+    
+        // Lấy thông tin khách hàng và địa chỉ giao hàng từ defaultAddress
+        if (!defaultAddress) {
+            alert('Vui lòng thêm địa chỉ giao hàng trước khi thanh toán.');
+            return;
+        }
+    
+        // Chuẩn bị dữ liệu đơn hàng mới với từng sản phẩm riêng biệt
+        const newOrder = {
+            id: Date.now(), // ID duy nhất cho đơn hàng
+            customer: {
+                name: defaultAddress.fullName,
+                phone: defaultAddress.phone,
+                address: `${defaultAddress.province}, ${defaultAddress.district}, ${defaultAddress.ward}`,
+                addressType: defaultAddress.addressType, // Loại địa chỉ (ví dụ: nhà riêng, công ty, v.v.)
+            },
+            products: cart.map((product) => ({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                quantity: product.quantity,
+                image: product.image, // Hình ảnh của sản phẩm
+                total: product.price * product.quantity, // Tổng tiền cho sản phẩm
+            })),
+            status: 'Chờ lấy hàng', // Trạng thái mặc định
+            totalAmount: totalAmount, // Tổng tiền toàn bộ đơn hàng
+            createdAt: new Date().toISOString(), // Thời gian thanh toán
+        };
+    
+        try {
+            // Gửi yêu cầu POST để lưu đơn hàng vào API
+            await axios.post('http://localhost:3000/checkout', newOrder);
+    
+            // Thông báo thành công và điều hướng đến trang quản lý đơn hàng
+            alert('Mua hàng thành công!');
+            navigate('/orders');
+        } catch (error) {
+            console.error('Lỗi khi lưu đơn hàng:', error);
+            alert('Có lỗi xảy ra, vui lòng thử lại.');
+        }
+    };
+    
+
+    const handleNoProducts = () => {
+        navigate('/cart'); // Điều hướng người dùng về trang giỏ hàng
     };
 
-    const totalAmount = orderAmount + shippingFee - discount;
-    const [defaultAddress, setDefaultAddress] = useState(null);
-
-    useEffect(() => {
-        // Lấy địa chỉ mặc định từ localStorage khi trang thanh toán được tải
-        const addresses = JSON.parse(localStorage.getItem('addresses')) || [];
-        const defaultAddr = addresses.find(address => address.isDefault);
-        setDefaultAddress(defaultAddr);
-    }, []);
 
     return (
         <Box sx={{ padding: 3 }}>
             <Typography variant="h4" gutterBottom>
-                Thanh Toán
+                Mua hàng
             </Typography>
 
-            {/* Địa chỉ giao hàng */}
-            {defaultAddress ? (
-                <Card sx={{ marginBottom: 2 }}>
-                    <CardContent>
-                        <Typography variant="h6">Địa chỉ giao hàng:</Typography>
-                        <Typography variant="body1">
-                            {defaultAddress.fullName} - {defaultAddress.phone}
-                        </Typography>
-                        <Typography variant="body1">
-                            {defaultAddress.province}, {defaultAddress.district}, {defaultAddress.ward}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                            Loại địa chỉ: {defaultAddress.addressType}
-                        </Typography>
-                    </CardContent>
-                </Card>
+            {/* Kiểm tra giỏ hàng có sản phẩm không */}
+            {cart.length === 0 ? (
+                <Alert severity="info" action={
+                    <Button color="inherit" size="small" onClick={handleNoProducts}>
+                        OK
+                    </Button>
+                }>
+                    Chưa có sản phẩm, vui lòng mua hàng
+                </Alert>
             ) : (
-                <Typography variant="body1" color="error">
-                    Bạn chưa có địa chỉ mặc định!
-                </Typography>
-            )}
+                <>
+                    {/* Địa chỉ giao hàng */}
+                    {defaultAddress ? (
+                        <Card sx={{ marginBottom: 2, borderRadius: 0 }}>
+                            <CardContent>
+                                <Typography variant="h6">Địa chỉ giao hàng:</Typography>
+                                <Typography variant="body1">
+                                    {defaultAddress.fullName} - {defaultAddress.phone}
+                                </Typography>
+                                <Typography variant="body1">
+                                    {defaultAddress.province}, {defaultAddress.district}, {defaultAddress.ward}
+                                </Typography>
+                                <Typography variant="body2" color="textSecondary">
+                                    Loại địa chỉ: {defaultAddress.addressType}
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Typography variant="body1" color="error">
+                            Bạn chưa có địa chỉ mặc định!
+                        </Typography>
+                    )}
+                    {/* Hiển thị sản phẩm và thông tin cột */}
+                    {cart.map((product) => (
+                        selectedItems[product.id] && (
+                            <Paper sx={{ padding: 2, marginBottom: 2, borderRadius: 0 }} key={product.id}>
+                                <Grid container spacing={2}>
+                                    {/* Tên sản phẩm */}
+                                    <Grid item xs={3} md={6}>
+                                        <Grid container spacing={2}>
+                                            <Grid item>
+                                                <img src={product.image} alt={product.name} width={50} height={50} style={{ objectFit: 'cover' }} />
+                                            </Grid>
+                                            <Grid item>
+                                                <Typography variant="body1" fontWeight="bold">Sản Phẩm</Typography>
+                                                <Typography variant="body1">{product.name}</Typography>
+                                            </Grid>
+                                        </Grid>
+                                    </Grid>
 
-            {/* Thông tin sản phẩm */}
-            <Paper sx={{ padding: 2, marginBottom: 2 }}>
-                <Typography variant="h6">Thông tin và số lượng sản phẩm:</Typography>
-                <Typography variant="body1">Sản phẩm A - 2 x 50,000 VND</Typography>
-                <Typography variant="body1">Sản phẩm B - 1 x 30,000 VND</Typography>
-            </Paper>
+                                    {/* Đơn giá */}
+                                    <Grid item xs={2} md={2}>
+                                        <Typography variant="body1" fontWeight="bold">Đơn Giá</Typography>
+                                        <Typography variant="body1">{product.price.toLocaleString()} VND</Typography>
+                                    </Grid>
 
-            {/* Chọn hoặc Nhập Voucher */}
-            <FormControl fullWidth sx={{ marginBottom: 2 }}>
-                <InputLabel>Chọn hoặc Nhập Voucher</InputLabel>
-                <Select
-                    value={voucherType}
-                    onChange={handleVoucherTypeChange}
-                    label="Chọn hoặc Nhập Voucher"
-                >
-                    <MenuItem value="select">Voucher của bạn</MenuItem>
-                    <MenuItem value="input">Nhập voucher</MenuItem>
-                </Select>
-            </FormControl>
+                                    {/* Số lượng */}
+                                    <Grid item xs={2} md={2}>
+                                        <Typography variant="body1" fontWeight="bold">Số Lượng</Typography>
+                                        <Typography variant="body1">{product.quantity}</Typography>
+                                    </Grid>
 
-            {/* Nếu chọn "Chọn voucher" */}
-            {voucherType === 'select' && (
-                <FormControl fullWidth sx={{ marginBottom: 2 }}>
-                    <InputLabel>Chọn voucher</InputLabel>
-                    <Select
-                        value={voucher}
-                        onChange={handleVoucherChange}
-                        label="Chọn voucher"
+                                    {/* Thành tiền (Đơn giá * Số lượng) */}
+                                    <Grid item xs={3} md={2}>
+                                        <Typography variant="body1" fontWeight="bold">Thành Tiền</Typography>
+                                        <Typography variant="body1">
+                                            {(product.price * product.quantity).toLocaleString()} VND
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
+                            </Paper>
+                        )
+                    ))}
+
+                    {/* Chọn Voucher */}
+                    <FormControl fullWidth sx={{ marginBottom: 2 }}>
+                        <InputLabel >Chọn Voucher</InputLabel>
+                        <Select value={voucher} onChange={handleVoucherChange} label="Voucher">
+                            <MenuItem value="DISCOUNT10">Giảm 10%</MenuItem>
+                            <MenuItem value="DISCOUNT20">Giảm 20%</MenuItem>
+                            <MenuItem value="DISCOUNT30">Giảm 30%</MenuItem>
+                        </Select>
+                    </FormControl>
+
+                    {/* Phương thức vận chuyển */}
+                    <FormControl fullWidth sx={{ marginBottom: 2 }}>
+                        <InputLabel>Phương thức vận chuyển</InputLabel>
+                        <Select value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} label="Phương thức vận chuyển">
+                            <MenuItem value="standard">Giao hàng tiêu chuẩn (3-5 ngày)</MenuItem>
+                            <MenuItem value="express">Giao hàng nhanh (1-2 ngày)</MenuItem>
+                        </Select>
+                    </FormControl>
+
+                    {/* Ghi chú cho người bán */}
+                    <TextField
+                        fullWidth
+                        label="Ghi chú cho người bán"
+                        multiline
+                        rows={4}
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        sx={{ marginBottom: 2 }}
+                    />
+
+                    {/* Phương thức thanh toán */}
+                    <FormControl fullWidth sx={{ marginBottom: 2 }}>
+                        <InputLabel>Phương thức thanh toán</InputLabel>
+                        <Select
+                            value={paymentMethod}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                            label="Phương thức thanh toán"
+                        >
+                            <MenuItem value="cash">Thanh toán khi nhận hàng</MenuItem>
+                            <MenuItem value="wallet">Thanh toán qua ví điện tử Momo</MenuItem>
+                            <MenuItem value="wallet">Thanh toán qua ngân hàng</MenuItem>
+                            <MenuItem value="wallet">Thẻ tín dụng/Ghi nợ</MenuItem>
+                        </Select>
+                    </FormControl>
+
+                    {/* Phí vận chuyển và tổng tiền thanh toán */}
+                    <Typography variant="body1" sx={{ marginBottom: 2 }}>
+                        Phí vận chuyển: {shippingFee.toLocaleString()} VND
+                    </Typography>
+                    <Typography variant="h6" sx={{ marginBottom: 2 }}>
+                        Tổng số tiền cần thanh toán: {totalAmount.toLocaleString()} VND
+                    </Typography>
+
+                    {/* Xác nhận thanh toán */}
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleConfirmPayment}
+                        sx={{ marginTop: 2, borderRadius: 0 }}
                     >
-                        {availableVouchers.map((voucherItem) => (
-                            <MenuItem key={voucherItem.code} value={voucherItem.code}>
-                                {voucherItem.description}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+                        Xác nhận mua hàng
+                    </Button>
+                </>
             )}
-
-            {/* Nếu chọn "Nhập voucher" */}
-            {voucherType === 'input' && (
-                <TextField
-                    label="Nhập Voucher"
-                    variant="outlined"
-                    fullWidth
-                    value={voucher}
-                    onChange={handleVoucherChange}
-                    error={!!voucherError}
-                    helperText={voucherError}
-                    sx={{ marginBottom: 2 }}
-                />
-            )}
-
-            {/* Lời nhắc cho người bán */}
-            <TextField
-                label="Lời nhắc cho người bán"
-                variant="outlined"
-                fullWidth
-                multiline
-                rows={4}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                sx={{ marginBottom: 2 }}
-            />
-
-            {/* Phương thức vận chuyển */}
-            <FormControl fullWidth sx={{ marginBottom: 2 }}>
-                <InputLabel>Phương thức vận chuyển</InputLabel>
-                <Select
-                    value={shippingMethod}
-                    onChange={(e) => setShippingMethod(e.target.value)}
-                    label="Phương thức vận chuyển"
-                >
-                    <MenuItem value="fast">Vận chuyển nhanh</MenuItem>
-                    <MenuItem value="express">Vận chuyển hỏa tốc</MenuItem>
-                    <MenuItem value="standard">Vận chuyển tiêu chuẩn</MenuItem>
-                </Select>
-            </FormControl>
-
-            {/* Phương thức thanh toán */}
-            <FormControl fullWidth sx={{ marginBottom: 2 }}>
-                <InputLabel>Phương thức thanh toán</InputLabel>
-                <Select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    label="Phương thức thanh toán"
-                >
-                    <MenuItem value="cash">Thanh toán trực tiếp</MenuItem>
-                    <MenuItem value="wallet">Thanh toán qua ví điện tử</MenuItem>
-                </Select>
-            </FormControl>
-
-            {/* Phí ship */}
-            <Typography variant="body1" sx={{ marginBottom: 2 }}>
-                Phí vận chuyển: {shippingFee.toLocaleString()} VND
-            </Typography>
-
-            {/* Tổng số tiền cần thanh toán */}
-            <Typography variant="h6" sx={{ marginBottom: 2 }}>
-                Tổng số tiền cần thanh toán: {totalAmount.toLocaleString()} VND
-            </Typography>
-
-            {/* Xác nhận thanh toán */}
-            <Button
-                variant="contained"
-                color="primary"
-                onClick={handleConfirmPayment}
-                sx={{ marginTop: 2 }}
-            >
-                Xác nhận thanh toán
-            </Button>
         </Box>
     );
 };

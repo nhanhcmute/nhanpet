@@ -320,42 +320,42 @@
   ],
   "petSupplies": [
     {
-      "id": 1,
+      "id": "1",
       "name": "Premium Dog Food",
       "description": "High quality dog food with essential nutrients.",
       "price": 25.99,
       "image": "/dochoi1.jpg"
     },
     {
-      "id": 2,
+      "id": "2",
       "name": "Cat Litter Box",
       "description": "Durable and easy to clean cat litter box.",
       "price": 15.49,
       "image": "/dochoi1.jpg"
     },
     {
-      "id": 3,
+      "id": "3",
       "name": "Cat Litter Box",
       "description": "Durable and easy to clean cat litter box.",
       "price": 15.49,
       "image": "/dochoi1.jpg"
     },
     {
-      "id": 4,
+      "id": "4",
       "name": "Cat Litter Box",
       "description": "Durable and easy to clean cat litter box.",
       "price": 15.49,
       "image": "/dochoi1.jpg"
     },
     {
-      "id": 5,
+      "id": "5",
       "name": "Cat Litter Box",
       "description": "Durable and easy to clean cat litter box.",
       "price": 15.49,
       "image": "/dochoi1.jpg"
     },
     {
-      "id": 6,
+      "id": "6",
       "name": "Pet Grooming Kit",
       "description": "Complete grooming kit for your pets.",
       "price": 19.99,
@@ -364,21 +364,21 @@
   ],
   "exclusiveDeals": [
     {
-      "id": 1,
+      "id": "1",
       "name": "50% off on Premium Dog Food",
       "description": "Get 50% off on Premium Dog Food for your furry friend. Limited time offer!",
       "discount": 50,
       "image": "/dochoi1.jpg"
     },
     {
-      "id": 2,
+      "id": "2",
       "name": "Buy 1 Get 1 Free Cat Toys",
       "description": "Buy one get one free on selected cat toys. Perfect for your playful kitty!",
       "discount": 100,
       "image": "/dochoi1.jpg"
     },
     {
-      "id": 3,
+      "id": "3",
       "name": "20% off on Pet Grooming Kit",
       "description": "Save 20% on our grooming kit to keep your pets clean and happy.",
       "discount": 20,
@@ -436,21 +436,25 @@
           "sales": 25000,
           "orders": 5
         }
-      ]
+      ],
+      "id": "0b86"
     }
   ],
   "topProducts": [
     {
       "name": "Product A",
-      "revenue": 1200
+      "revenue": 1200,
+      "id": "437a"
     },
     {
       "name": "Product B",
-      "revenue": 900
+      "revenue": 900,
+      "id": "6bc3"
     },
     {
       "name": "Product C",
-      "revenue": 700
+      "revenue": 700,
+      "id": "687d"
     }
   ],
   "customerStats": {
@@ -479,7 +483,7 @@
   ],
   "orders": [
     {
-      "id": 1,
+      "id": "1",
       "customerName": "Nguyễn Văn A",
       "productName": "Chó Cảnh",
       "quantity": 2,
@@ -500,7 +504,7 @@
       ]
     },
     {
-      "id": 2,
+      "id": "2",
       "customerName": "Trần Thị B",
       "productName": "Mèo Cảnh",
       "quantity": 1,
@@ -521,7 +525,7 @@
       ]
     },
     {
-      "id": 3,
+      "id": "3",
       "customerName": "Lê Minh C",
       "productName": "Thức ăn cho chó",
       "quantity": 3,
@@ -573,7 +577,7 @@
   ],
   "profile": [
     {
-      "id": 1,
+      "id": "1",
       "name": "Nguyễn Hữu Thiện Nhân",
       "phone": "0396922376",
       "dob": "2001-06-18",
@@ -582,7 +586,7 @@
   ],
   "personalInfo": [
     {
-      "id": 1,
+      "id": "1",
       "name": "Nguyễn Hữu Thiện Nhân",
       "phone": "0396922376",
       "dob": "2001-06-18",
@@ -591,12 +595,12 @@
   ],
   "notifications": [
     {
-      "id": 1,
+      "id": "1",
       "message": "Thông báo hệ thống bảo trì vào lúc 10:00 AM",
       "role": "admin"
     },
     {
-      "id": 2,
+      "id": "2",
       "message": "Đơn hàng của bạn đã được xác nhận.",
       "role": "staff"
     },
@@ -614,6 +618,46 @@
       "id": "33de",
       "message": "bọn chó này ăn cứt đi",
       "role": "staff"
+    }
+  ],
+  "checkout": [
+    {
+      "id": 1733741364649,
+      "customer": {
+        "name": "Nguyễn Hữu Thiện Nhân",
+        "phone": "0396922376",
+        "address": "TP HCM, Quận 2, Phường 2",
+        "addressType": "Nhà riêng"
+      },
+      "products": [
+        {
+          "id": "4",
+          "name": "Mèo Cảnh",
+          "price": 300000,
+          "quantity": 27,
+          "image": "/anh1.jpg",
+          "total": 8100000
+        },
+        {
+          "id": "2",
+          "name": "Mèo Cảnh",
+          "price": 300000,
+          "quantity": 45,
+          "image": "/anh1.jpg",
+          "total": 13500000
+        },
+        {
+          "id": "1",
+          "name": "Chó Cảnh",
+          "price": 500000,
+          "quantity": 3,
+          "image": "/anh1.jpg",
+          "total": 1500000
+        }
+      ],
+      "status": "Chờ lấy hàng",
+      "totalAmount": 21620000,
+      "createdAt": "2024-12-09T10:49:24.649Z"
     }
   ]
 }
