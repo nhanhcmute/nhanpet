@@ -44,7 +44,7 @@ import Payments from './pages/admin/Payments';
 import Shipping from './pages/admin/Shipping';
 
 // Layouts
-import LayoutPage from './function/LayoutPage';
+import Layout from './function/Layout';
 import AdminLayout from './function/AdminLayout';
 
 // Context
@@ -60,7 +60,7 @@ function App() {
         <CartProvider>
           <Routes>
             {/* Routes dành cho khách hàng */}
-            <Route element={<LayoutPage />}>
+            <Route element={<Layout />}>
               <Route path="/" element={<HomePage />} />
               <Route path="/homepage" element={<HomePage />} />
               <Route path="/nhanpet" element={<HomePage/>} />

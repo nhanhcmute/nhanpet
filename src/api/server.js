@@ -1,11 +1,18 @@
 const express = require('express');
-const app = express();
 const cors = require('cors');
-const bodyParser = require('body-parser'); // Thêm body-parser để dễ xử lý dữ liệu từ body
+const jsonServer = require('json-server');
+const bodyParser = require('body-parser'); // body-parser không cần thiết nếu dùng express.json()
 
-app.use(cors());
+const app = express();
+const router = jsonServer.router('db.json');
+const middlewares = jsonServer.defaults();
+
+// Sử dụng các middleware của jsonServer và express
+app.use(middlewares);
 app.use(express.json()); // Để có thể đọc dữ liệu từ request body
+app.use(cors());
 
+// Tạo dữ liệu mẫu cho người dùng
 const users = [
   { id: "1", username: "admin", password: "12345", role: "admin" },
   { id: "2", username: "user", password: "67890", role: "staff" },
@@ -25,7 +32,7 @@ app.post('/login', (req, res) => {
 
 // API: Lấy danh sách người dùng
 app.get('/users', (req, res) => {
-  res.json(users); // Trả về danh sách người dùng
+  res.json(users);
 });
 
 // API: Thêm tài khoản admin mới
@@ -45,7 +52,7 @@ app.post('/users', (req, res) => {
     role
   };
   users.push(newUser);
-  res.status(201).json(newUser); // Trả về tài khoản mới vừa được thêm
+  res.status(201).json(newUser);
 });
 
 // API: Cập nhật vai trò người dùng
@@ -74,32 +81,7 @@ app.delete('/users/:id', (req, res) => {
   res.status(200).json({ message: 'Người dùng đã được xóa!' });
 });
 
-// API: Cấu hình quyền hạn theo module
-app.post('/permissions', (req, res) => {
-  const { userId, permissions } = req.body;
-
-  const user = users.find(u => u.id === userId);
-  if (!user) {
-    return res.status(404).json({ message: 'Người dùng không tồn tại!' });
-  }
-
-  user.permissions = permissions; // Cập nhật quyền hạn cho người dùng
-  res.json(user); // Trả về người dùng với quyền hạn đã cập nhật
-});
-
-// API: Lấy quyền hạn của người dùng
-app.get('/permissions/:userId', (req, res) => {
-  const { userId } = req.params;
-  const user = users.find(u => u.id === userId);
-
-  if (!user) {
-    return res.status(404).json({ message: 'Người dùng không tồn tại!' });
-  }
-
-  res.json({ permissions: user.permissions || [] }); // Trả về quyền hạn của người dùng
-});
-
-// API: Lấy danh sách sản phẩm và đánh giá (Ví dụ thêm API sản phẩm)
+// API: Lấy danh sách sản phẩm và đánh giá
 app.get('/products/:id/reviews', (req, res) => {
   const productId = req.params.id;
 
@@ -110,9 +92,10 @@ app.get('/products/:id/reviews', (req, res) => {
     { rating: 3, review: 'Chất lượng ổn.' }
   ];
 
-  res.json(reviews); // Trả về danh sách đánh giá dưới dạng JSON
+  res.json(reviews);
 });
 
+// Tạo danh sách thông báo
 let notifications = [
   { message: "Đơn hàng mới", role: "admin" },
   { message: "Sản phẩm sắp hết hàng", role: "staff" },
@@ -122,65 +105,10 @@ app.get("/notifications", (req, res) => {
   res.json(notifications);
 });
 
-app.post("/notifications", (req, res) => {
-  const { message, role } = req.body;
-  const newNotification = { message, role };
-  notifications.push(newNotification);
-  res.status(201).json(newNotification); // Trả về thông báo vừa gửi
-});
-// API để lấy danh sách đơn hàng
-server.get('/orders', (req, res) => {
-  const orders = router.db.get('orders').value();
-  res.json(orders);
-});
-
-// API để cập nhật trạng thái thanh toán
-server.put('/orders/:id', (req, res) => {
-  const { id } = req.params;
-  const { paymentStatus } = req.body;
-
-  const order = router.db.get('orders').find({ id: parseInt(id) }).value();
-  if (!order) {
-    return res.status(404).json({ message: 'Order not found' });
-  }
-
-  order.paymentStatus = paymentStatus;
-
-  // Cập nhật vào db.json
-  router.db.write();
-
-  res.status(200).json(order);
-});
-server.put('/orders/:id/shipping', (req, res) => {
-  const { id } = req.params;
-  const { shippingStatus } = req.body;
-
-  const order = router.db.get('orders').find({ id: parseInt(id) }).value();
-  if (!order) {
-    return res.status(404).json({ message: 'Order not found' });
-  }
-
-  order.shippingStatus = shippingStatus;
-
-  // Cập nhật vào db.json
-  router.db.write();
-
-  res.status(200).json(order);
-});
-// API: Lấy tất cả thông báo
-app.get("/notifications", (req, res) => {
-  res.json(notifications);
-});
-
 // API: Thêm thông báo mới
 app.post("/notifications", (req, res) => {
   const { message, role } = req.body;
-  const newNotification = {
-    id: notifications.length + 1,
-    message,
-    role,
-    createdAt: Date.now(),
-  };
+  const newNotification = { id: notifications.length + 1, message, role, createdAt: Date.now() };
   notifications.push(newNotification);
   res.status(201).json(newNotification);
 });
@@ -217,9 +145,42 @@ app.delete("/notifications/:id", (req, res) => {
   res.status(204).send();
 });
 
-const productRoutes = require('./api/products'); // Import file routes
-app.use('/api', productRoutes);
+// API: Cập nhật trạng thái đơn hàng
+app.patch('/checkout/:id', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const order = router.db.get('checkout').find({ id }).value();
+
+  if (!order) {
+    return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+  }
+
+  // Kiểm tra trạng thái mới có hợp lệ với trạng thái hiện tại
+  const validTransitions = {
+    'Chờ xác nhận': ['Chờ lấy hàng', 'Đã hủy'],
+    'Chờ lấy hàng': ['Chờ giao hàng', 'Đã hủy'],
+    'Chờ giao hàng': ['Hoàn thành'],
+    'Hoàn thành': [],
+    'Đã hủy': ['Trả hàng/Hoàn tiền'],
+    'Trả hàng/Hoàn tiền': []
+  };
+
+  if (!validTransitions[order.status] || !validTransitions[order.status].includes(status)) {
+    return res.status(400).json({ error: 'Trạng thái chuyển không hợp lệ' });
+  }
+
+  // Cập nhật trạng thái đơn hàng
+  order.status = status;
+  router.db.get('checkout').find({ id }).assign(order).write();
+
+  return res.status(200).json(order);
+});
+
+// Kết nối với router của json-server để xử lý các API đơn giản cho checkout
+app.use('/api', router);
+
+// Bắt đầu server
 app.listen(5000, () => {
   console.log('Server running on http://localhost:5000');
 });
-
